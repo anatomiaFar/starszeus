@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>StarsZeus</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #0f1016);
+    --bg2: var(--tg-theme-secondary-bg-color, #181a23);
+    --text: var(--tg-theme-text-color, #f3f3f7);
+    --hint: var(--tg-theme-hint-color, #8b8d9c);
+    --link: var(--tg-theme-link-color, #6ab3f3);
+    --btn: var(--tg-theme-button-color, #2f8cf0);
+    --btn-text: var(--tg-theme-button-text-color, #ffffff);
+    --card: var(--tg-theme-section-bg-color, var(--bg2));
+    --sep: color-mix(in srgb, var(--hint) 22%, transparent);
+    --gold-1: #ffd66b;
+    --gold-2: #ff9f2e;
+    --violet-1: #b388ff;
+    --violet-2: #6c5cff;
+    --ok: #34c759;
+    --bad: #ff453a;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    padding: 0 16px calc(96px + env(safe-area-inset-bottom));
+  }
+  .hero {
+    position: relative;
+    margin: 12px 0 18px;
+    padding: 18px 18px 16px;
+    border-radius: 22px;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 140% at 0% 0%, rgba(255,214,107,.28), transparent 55%),
+      radial-gradient(120% 140% at 100% 100%, rgba(108,92,255,.30), transparent 55%),
+      var(--card);
+  }
+  .hero h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .bolt {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--gold-1), var(--gold-2));
+    color: #3a2300; font-size: 17px;
+    box-shadow: 0 6px 18px rgba(255,159,46,.35);
+  }
+  .hero p { margin: 6px 0 0; color: var(--hint); font-size: 14px; }
+  .perks { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .perk {
+    font-size: 12px; padding: 5px 9px; border-radius: 999px;
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+  }
+
+  .tabs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    padding: 4px; border-radius: 14px; background: var(--card);
+    margin-bottom: 18px;
+  }
+  .tab {
+    border: 0; border-radius: 11px; padding: 11px 8px;
+    font: inherit; font-weight: 650; color: var(--hint); background: transparent;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer; transition: background .2s, color .2s;
+  }
+  .tab.active { color: var(--text); background: color-mix(in srgb, var(--text) 10%, transparent); }
+  .tab .ico { font-size: 16px; }
+
+  .section { margin-bottom: 18px; }
+  .label {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .4px;
+    color: var(--hint); margin: 0 4px 8px;
+  }
+  .card { background: var(--card); border-radius: var(--radius); padding: 4px; }
+
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .seg button {
+    border: 0; border-radius: 12px; padding: 12px 8px; font: inherit; font-weight: 600;
+    color: var(--text); background: transparent; cursor: pointer;
+  }
+  .seg button.active { background: color-mix(in srgb, var(--btn) 18%, transparent); color: var(--btn); }
+  .seg button:disabled { opacity: .4; cursor: default; }
+
+  .input-wrap {
+    display: flex; align-items: center; gap: 2px;
+    margin: 4px; padding: 0 12px; border-radius: 12px;
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    border: 1.5px solid transparent; transition: border-color .2s;
+  }
+  .input-wrap.err { border-color: var(--bad); }
+  .input-wrap span { color: var(--hint); font-weight: 600; }
+  .input-wrap input {
+    flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+    color: var(--text); font: inherit; font-size: 16px; padding: 13px 0;
+  }
+  .self-line { padding: 10px 14px 12px; color: var(--hint); font-size: 14px; }
+  .self-line b { color: var(--text); }
+  .field-hint { margin: 6px 4px 0; font-size: 12.5px; color: var(--hint); min-height: 17px; }
+  .field-hint.err { color: var(--bad); }
+
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .chip {
+    border: 1.5px solid transparent; border-radius: 14px; padding: 12px;
+    background: var(--card); color: var(--text); text-align: left; font: inherit;
+    cursor: pointer; transition: border-color .15s, transform .1s;
+  }
+  .chip:active { transform: scale(.98); }
+  .chip .q { font-weight: 750; font-size: 16px; display: flex; align-items: center; gap: 5px; }
+  .chip .p { color: var(--hint); font-size: 13px; margin-top: 2px; }
+  .chip.active { border-color: var(--gold-2); background: color-mix(in srgb, var(--gold-2) 12%, var(--card)); }
+  .star { color: var(--gold-2); }
+
+  .custom { margin-top: 8px; }
+  .custom .input-wrap { margin: 0; background: var(--card); }
+
+  .plans { display: grid; gap: 8px; }
+  .plan {
+    position: relative; display: flex; align-items: center; gap: 12px;
+    border: 1.5px solid transparent; border-radius: 16px; padding: 14px;
+    background: var(--card); color: var(--text); text-align: left; font: inherit; cursor: pointer;
+    transition: border-color .15s;
+  }
+  .plan.active { border-color: var(--violet-2); background: color-mix(in srgb, var(--violet-2) 12%, var(--card)); }
+  .plan .gem {
+    width: 42px; height: 42px; border-radius: 12px; flex: none;
+    display: grid; place-items: center; font-size: 20px;
+    background: linear-gradient(135deg, var(--violet-1), var(--violet-2));
+  }
+  .plan .meta { flex: 1; }
+  .plan .t { font-weight: 700; font-size: 16px; }
+  .plan .s { color: var(--hint); font-size: 13px; }
+  .plan .price { font-weight: 750; font-size: 16px; white-space: nowrap; }
+  .badge {
+    position: absolute; top: -8px; right: 12px;
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--gold-1), var(--gold-2)); color: #3a2300;
+  }
+
+  .methods { display: grid; gap: 0; }
+  .method {
+    display: flex; align-items: center; gap: 12px; padding: 12px;
+    border: 0; background: transparent; color: var(--text); font: inherit; text-align: left;
+    border-radius: 12px; cursor: pointer;
+  }
+  .method + .method { border-top: 1px solid var(--sep); border-radius: 0 0 12px 12px; }
+  .method .mi {
+    width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 18px; flex: none;
+  }
+  .mi.card-ico { background: rgba(47,140,240,.16); }
+  .mi.ton-ico { background: rgba(0,152,234,.16); }
+  .mi.cr-ico { background: rgba(255,159,46,.16); }
+  .method .mt { flex: 1; }
+  .method .mt b { display: block; font-weight: 650; }
+  .method .mt small { color: var(--hint); }
+  .radio {
+    width: 22px; height: 22px; border-radius: 50%; flex: none;
+    border: 2px solid color-mix(in srgb, var(--hint) 60%, transparent);
+    display: grid; place-items: center; transition: border-color .15s;
+  }
+  .method.active .radio { border-color: var(--btn); }
+  .method.active .radio::after { content: ""; width: 11px; height: 11px; border-radius: 50%; background: var(--btn); }
+
+  .summary { padding: 14px 16px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 14px; }
+  .row span:first-child { color: var(--hint); }
+  .row b { text-align: right; }
+  .total { border-top: 1px solid var(--sep); margin-top: 8px; padding-top: 10px; font-size: 17px; }
+  .total b { font-size: 20px; }
+  .club-note { font-size: 12.5px; color: var(--gold-2); margin-top: 6px; }
+
+  .note { color: var(--hint); font-size: 12.5px; text-align: center; margin: 4px 12px 0; }
+  .note a { color: var(--link); text-decoration: none; }
+
+  /* кнопка-запаска: видна только вне Telegram (предпросмотр в браузере) */
+  .fallback-pay {
+    position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));
+    border: 0; border-radius: 14px; padding: 15px; font: inherit; font-weight: 700; font-size: 16px;
+    background: var(--btn); color: var(--btn-text); display: none; cursor: pointer;
+  }
+  .fallback-pay:disabled { opacity: .5; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <h1><span class="bolt">⚡</span>StarsZeus</h1>
+    <p>Звёзды и Telegram Premium за пару касаний</p>
+    <div class="perks">
+      <span class="perk">⚡ Выдача 1–3 мин</span>
+      <span class="perk">🛡 Безопасная оплата</span>
+      <span class="perk">🕓 24/7</span>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="stars" role="tab"><span class="ico">⭐</span>Звёзды</button>
+    <button class="tab" data-tab="tgpremium" role="tab"><span class="ico">💎</span>Premium</button>
+  </div>
+
+  <!-- Получатель -->
+  <div class="section">
+    <div class="label">Кому</div>
+    <div class="card">
+      <div class="seg">
+        <button id="to-self" class="active">Себе</button>
+        <button id="to-friend">Другу</button>
+      </div>
+      <div id="self-box" class="self-line"></div>
+      <div id="friend-box" class="hidden">
+        <div class="input-wrap" id="friend-wrap">
+          <span>@</span>
+          <input id="friend" type="text" inputmode="text" autocomplete="off" autocapitalize="off"
+                 spellcheck="false" maxlength="32" placeholder="username получателя">
+        </div>
+      </div>
+    </div>
+    <div class="field-hint" id="recipient-hint"></div>
+  </div>
+
+  <!-- Звёзды -->
+  <div class="section" id="stars-sec">
+    <div class="label">Сколько звёзд</div>
+    <div class="grid" id="presets"></div>
+    <div class="custom">
+      <div class="input-wrap" id="qty-wrap">
+        <span class="star">⭐</span>
+        <input id="qty" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Своё количество">
+      </div>
+      <div class="field-hint" id="qty-hint"></div>
+    </div>
+  </div>
+
+  <!-- Premium -->
+  <div class="section hidden" id="prem-sec">
+    <div class="label">Срок подписки</div>
+    <div class="plans" id="plans"></div>
+  </div>
+
+  <!-- Оплата -->
+  <div class="section">
+    <div class="label">Оплата</div>
+    <div class="card methods" id="methods"></div>
+  </div>
+
+  <!-- Итог -->
+  <div class="section">
+    <div class="card summary">
+      <div class="row"><span>Товар</span><b id="sum-item">—</b></div>
+      <div class="row"><span>Получатель</span><b id="sum-to">—</b></div>
+      <div class="row total"><span>К оплате</span><b id="sum-total">—</b></div>
+      <div class="club-note hidden" id="club-note"></div>
+    </div>
+    <p class="note">После нажатия «Оплатить» бот пришлёт счёт в чат.<br>
+      Вопросы — <a id="sup-link" href="#">поддержка</a></p>
+  </div>
+
+  <button class="fallback-pay" id="fallback-pay">Оплатить</button>
+
+<script>
+(function () {
+  "use strict";
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var inTelegram = !!(tg && tg.initData);
+  var qs = new URLSearchParams(location.search);
+
+  function num(key, def) {
+    var v = parseFloat(qs.get(key));
+    return isFinite(v) && v > 0 ? v : def;
+  }
+
+  // Цены приходят от бота в ссылке. Итог всё равно пересчитывает бот при создании счёта.
+  var P = {
+    star: num("s", 1.75),
+    starBase: num("b", num("s", 1.75)),
+    min: Math.max(1, Math.round(num("min", 50))),
+    prem: { 3: num("p3", 0), 6: num("p6", 0), 12: num("p12", 0) },
+    club: qs.get("c") === "1",
+    crypto: qs.get("cr") === "1",
+    ton: qs.get("ton") !== "0",
+    support: qs.get("sup") || ""
+  };
+  var MAX_STARS = 1000000;
+  var tgUser = inTelegram && tg.initDataUnsafe && tg.initDataUnsafe.user;
+  var selfName = (tgUser && tgUser.username) || qs.get("u") || "";
+
+  var state = {
+    kind: "stars",
+    toSelf: !!selfName,
+    friend: "",
+    qty: 500,
+    customQty: "",
+    months: 12,
+    method: "lava"
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function rub(v) {
+    return v.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₽";
+  }
+  function fmtInt(v) { return v.toLocaleString("ru-RU"); }
+  function haptic(kind) {
+    try {
+      if (!inTelegram || !tg.HapticFeedback) return;
+      if (kind === "select") tg.HapticFeedback.selectionChanged();
+      else if (kind === "error") tg.HapticFeedback.notificationOccurred("error");
+      else tg.HapticFeedback.impactOccurred("light");
+    } catch (e) {}
+  }
+  var USER_RE = /^[A-Za-z][A-Za-z0-9_]{3,31}$/;
+
+  // ── отрисовка ──────────────────────────────────────────────────────────
+  var PRESETS = [50, 100, 250, 500, 1000, 2500, 5000, 10000].filter(function (q) { return q >= P.min; });
+
+  function renderPresets() {
+    var box = $("presets");
+    if (box.childElementCount) {
+      Array.prototype.forEach.call(box.children, function (b) {
+        b.classList.toggle("active", !state.customQty && state.qty === +b.dataset.q);
+      });
+      return;
+    }
+    PRESETS.forEach(function (q) {
+      var b = document.createElement("button");
+      b.dataset.q = q;
+      b.className = "chip" + (!state.customQty && state.qty === q ? " active" : "");
+      b.innerHTML = '<div class="q"><span class="star">⭐</span>' + fmtInt(q) + '</div>' +
+                    '<div class="p">' + rub(q * P.star) + '</div>';
+      b.onclick = function () {
+        state.qty = q; state.customQty = ""; $("qty").value = "";
+        haptic("select"); update();
+      };
+      box.appendChild(b);
+    });
+  }
+
+  function renderPlans() {
+    var box = $("plans");
+    if (box.childElementCount) {
+      Array.prototype.forEach.call(box.children, function (b) {
+        b.classList.toggle("active", state.months === +b.dataset.m);
+      });
+      return;
+    }
+    [[3, "3 месяца"], [6, "6 месяцев"], [12, "12 месяцев"]].forEach(function (pair) {
+      var m = pair[0], price = P.prem[m];
+      var b = document.createElement("button");
+      b.dataset.m = m;
+      b.className = "plan" + (state.months === m ? " active" : "");
+      var perMonth = price ? rub(price / m) + " / мес" : "цена уточняется";
+      b.innerHTML = (m === 12 ? '<span class="badge">Выгоднее всего</span>' : "") +
+        '<span class="gem">💎</span>' +
+        '<span class="meta"><div class="t">' + pair[1] + '</div><div class="s">' + perMonth + '</div></span>' +
+        '<span class="price">' + (price ? rub(price) : "—") + '</span>';
+      b.onclick = function () { state.months = m; haptic("select"); update(); };
+      box.appendChild(b);
+    });
+  }
+
+  function renderMethods() {
+    var list = [["lava", "card-ico", "💳", "Карта или СБП", "Рубли, любой банк"]];
+    if (P.ton) list.push(["ton", "ton-ico", "💠", "TON", "Через Tonkeeper или любой кошелёк"]);
+    if (P.crypto) list.push(["crypto", "cr-ico", "🪙", "Криптовалюта", "USDT и другие"]);
+    if (!list.some(function (x) { return x[0] === state.method; })) state.method = list[0][0];
+    var box = $("methods");
+    if (box.childElementCount) {
+      Array.prototype.forEach.call(box.children, function (b) {
+        b.classList.toggle("active", state.method === b.dataset.m);
+      });
+      return;
+    }
+    list.forEach(function (x) {
+      var b = document.createElement("button");
+      b.dataset.m = x[0];
+      b.className = "method" + (state.method === x[0] ? " active" : "");
+      b.innerHTML = '<span class="mi ' + x[1] + '">' + x[2] + '</span>' +
+        '<span class="mt"><b>' + x[3] + '</b><small>' + x[4] + '</small></span><span class="radio"></span>';
+      b.onclick = function () { state.method = x[0]; haptic("select"); update(); };
+      box.appendChild(b);
+    });
+  }
+
+  // ── расчёт и проверка ──────────────────────────────────────────────────
+  function currentQty() {
+    if (state.kind === "tgpremium") return state.months;
+    if (state.customQty !== "") return parseInt(state.customQty, 10) || 0;
+    return state.qty;
+  }
+  function currentPrice() {
+    if (state.kind === "tgpremium") return P.prem[state.months] || 0;
+    return Math.round(currentQty() * P.star * 100) / 100;
+  }
+  function recipient() {
+    if (state.toSelf) return selfName;
+    return state.friend.replace(/^@+/, "").trim();
+  }
+
+  function validate() {
+    var errs = {};
+    var r = recipient();
+    if (!r) errs.recipient = state.toSelf ? "" : "Введи @username получателя";
+    else if (!USER_RE.test(r)) errs.recipient = "Username: 4–32 символа, латиница, цифры и _";
+    if (state.kind === "stars") {
+      var q = currentQty();
+      if (q < P.min) errs.qty = "Минимум " + fmtInt(P.min) + " звёзд";
+      else if (q > MAX_STARS) errs.qty = "Максимум " + fmtInt(MAX_STARS) + " звёзд";
+    } else if (!P.prem[state.months]) {
+      errs.qty = "Цена Premium сейчас недоступна — попробуй позже";
+    }
+    return errs;
+  }
+
+  var touched = { recipient: false, qty: false };
+
+  function update() {
+    var isStars = state.kind === "stars";
+    document.querySelectorAll(".tab").forEach(function (t) {
+      t.classList.toggle("active", t.dataset.tab === state.kind);
+    });
+    $("stars-sec").classList.toggle("hidden", !isStars);
+    $("prem-sec").classList.toggle("hidden", isStars);
+
+    // получатель
+    $("to-self").classList.toggle("active", state.toSelf);
+    $("to-friend").classList.toggle("active", !state.toSelf);
+    $("to-self").disabled = !selfName;
+    $("self-box").classList.toggle("hidden", !state.toSelf);
+    $("friend-box").classList.toggle("hidden", state.toSelf);
+    $("self-box").innerHTML = selfName
+      ? "На твой аккаунт <b>@" + selfName + "</b>"
+      : "У тебя нет @username — укажи получателя во вкладке «Другу»";
+
+    if (isStars) renderPresets(); else renderPlans();
+    renderMethods();
+
+    var errs = validate();
+    var rh = $("recipient-hint");
+    var showR = errs.recipient && (touched.recipient || state.friend.length > 0);
+    rh.textContent = showR ? errs.recipient : (state.toSelf ? "" : "Звёзды и Premium придут на этот аккаунт");
+    rh.classList.toggle("err", !!showR);
+    $("friend-wrap").classList.toggle("err", !!showR);
+
+    var qh = $("qty-hint");
+    var showQ = isStars && errs.qty && (touched.qty || state.customQty !== "");
+    qh.textContent = showQ ? errs.qty : (isStars ? "От " + fmtInt(P.min) + " звёзд, любое число" : "");
+    qh.classList.toggle("err", !!showQ);
+    $("qty-wrap").classList.toggle("err", !!showQ);
+
+    // итог
+    var price = currentPrice();
+    var q = currentQty();
+    $("sum-item").textContent = isStars
+      ? (q ? fmtInt(q) + " ⭐ Telegram Звёзды" : "—")
+      : "Telegram Premium · " + state.months + " мес";
+    var r = recipient();
+    $("sum-to").textContent = r ? "@" + r : "—";
+    $("sum-total").textContent = price ? rub(price) : "—";
+
+    var cn = $("club-note");
+    if (isStars && P.club && P.starBase > P.star && q) {
+      cn.textContent = "★ Скидка StarsZeus Club: экономия " + rub((P.starBase - P.star) * q);
+      cn.classList.remove("hidden");
+    } else {
+      cn.classList.add("hidden");
+    }
+
+    var ok = Object.keys(errs).length === 0 && price > 0;
+    var label = ok ? "Оплатить · " + rub(price) : "Оплатить";
+    if (inTelegram) {
+      tg.MainButton.setText(label);
+      if (ok) {
+        tg.MainButton.enable();
+        tg.MainButton.setParams({ color: tg.themeParams.button_color || "#2f8cf0",
+                                  text_color: tg.themeParams.button_text_color || "#ffffff" });
+      } else {
+        tg.MainButton.disable();
+        tg.MainButton.setParams({ color: tg.themeParams.hint_color || "#8b8d9c" });
+      }
+      tg.MainButton.show();
+    } else {
+      var fb = $("fallback-pay");
+      fb.textContent = label; fb.disabled = !ok; fb.style.display = "block";
+    }
+  }
+
+  // ── отправка заказа в бота ─────────────────────────────────────────────
+  function submit() {
+    touched.recipient = true; touched.qty = true;
+    var errs = validate();
+    if (Object.keys(errs).length || !currentPrice()) {
+      haptic("error"); update(); return;
+    }
+    var payload = JSON.stringify({
+      v: 1, k: state.kind, r: "@" + recipient(), q: currentQty(), m: state.method
+    });
+    if (inTelegram) {
+      haptic("impact");
+      tg.MainButton.showProgress(false);
+      tg.sendData(payload); // приложение закроется, бот пришлёт счёт в чат
+    } else {
+      alert("Предпросмотр вне Telegram.\nВ боте будет отправлено:\n" + payload);
+    }
+  }
+
+  // ── события ────────────────────────────────────────────────────────────
+  document.querySelectorAll(".tab").forEach(function (t) {
+    t.onclick = function () {
+      if (state.kind === t.dataset.tab) return;
+      state.kind = t.dataset.tab; haptic("select"); update();
+    };
+  });
+  $("to-self").onclick = function () { if (!selfName) return; state.toSelf = true; haptic("select"); update(); };
+  $("to-friend").onclick = function () {
+    state.toSelf = false; haptic("select"); update();
+    setTimeout(function () { $("friend").focus(); }, 50);
+  };
+  $("friend").addEventListener("input", function (e) {
+    var v = e.target.value.replace(/^@+/, "").replace(/[^A-Za-z0-9_]/g, "");
+    if (v !== e.target.value) e.target.value = v;
+    state.friend = v; update();
+  });
+  $("friend").addEventListener("blur", function () { touched.recipient = true; update(); });
+  $("qty").addEventListener("input", function (e) {
+    var v = e.target.value.replace(/\D/g, "").slice(0, 7);
+    if (v !== e.target.value) e.target.value = v;
+    state.customQty = v; update();
+  });
+  $("qty").addEventListener("blur", function () { if (state.customQty !== "") touched.qty = true; update(); });
+  $("fallback-pay").onclick = submit;
+  // Enter на клавиатуре — убрать клавиатуру
+  ["friend", "qty"].forEach(function (id) {
+    $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") e.target.blur(); });
+  });
+
+  if (P.support) {
+    $("sup-link").href = "https://t.me/" + P.support;
+    $("sup-link").onclick = function (e) {
+      if (inTelegram) { e.preventDefault(); tg.openTelegramLink("https://t.me/" + P.support); }
+    };
+  }
+
+  if (inTelegram) {
+    tg.ready();
+    tg.expand();
+    try { tg.setHeaderColor("bg_color"); tg.setBackgroundColor("bg_color"); } catch (e) {}
+    tg.MainButton.onClick(submit);
+  }
+  update();
+})();
+</script>
+</body>
+</html>
