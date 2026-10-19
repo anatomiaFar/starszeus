@@ -122,14 +122,61 @@
     background: var(--btn); color: var(--btn-text); display: none;
   }
   .fallback-pay:disabled { opacity: .5; }
+
+  /* ошибка */
+  .alert { display: flex; gap: 8px; align-items: center; padding: 9px 11px; margin-bottom: 8px;
+           border-radius: 12px; background: color-mix(in srgb, var(--bad) 14%, var(--card)); font-size: 13px; }
+  .alert span { flex: 1; }
+  .alert button { padding: 6px 10px; border-radius: 9px; background: var(--btn); color: var(--btn-text);
+                  font-weight: 650; font-size: 12.5px; white-space: nowrap; }
+
+  /* экран оплаты */
+  .bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .back { padding: 6px 10px 6px 6px; border-radius: 10px; color: var(--link); font-weight: 600; }
+  .bar h2 { margin: 0; font-size: 17px; font-weight: 750; flex: 1; text-align: center; padding-right: 64px; }
+  .card { border-radius: 12px; background: var(--card); padding: 11px 12px; margin-bottom: 8px; }
+  .sum-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .sum-row span { color: var(--hint); font-size: 13px; }
+  .sum-row b { font-size: 20px; white-space: nowrap; }
+  .oid { font-size: 11.5px; color: var(--hint); margin-top: 3px; }
+  .line { display: flex; align-items: center; gap: 8px; padding: 9px 0; }
+  .line + .line { border-top: 1px solid color-mix(in srgb, var(--hint) 20%, transparent); }
+  .line .k { font-size: 11.5px; color: var(--hint); text-transform: uppercase; letter-spacing: .3px; }
+  .line .v { font-weight: 650; font-size: 14px; word-break: break-all; margin-top: 1px;
+             font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .line .v.big { font-size: 17px; }
+  .line > div { flex: 1; min-width: 0; }
+  .copy { flex: none; padding: 7px 10px; border-radius: 9px; font-weight: 650; font-size: 12.5px;
+          background: color-mix(in srgb, var(--btn) 16%, transparent); color: var(--btn); }
+  .copy.done { background: color-mix(in srgb, #34c759 18%, transparent); color: #34c759; }
+  .warn { font-size: 12.5px; color: var(--gold); margin: 2px 2px 8px; }
+  .hintline { font-size: 12.5px; color: var(--hint); margin: 2px 2px 8px; }
+  .status { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 12px;
+            background: var(--card); font-size: 13.5px; }
+  .status b { display: block; font-size: 14px; }
+  .status small { color: var(--hint); }
+  .spin { width: 18px; height: 18px; border-radius: 50%; flex: none;
+          border: 2.5px solid color-mix(in srgb, var(--hint) 35%, transparent); border-top-color: var(--btn);
+          animation: sp .9s linear infinite; }
+  .status.ok .spin, .status.bad .spin { animation: none; border: 0; width: auto; height: auto; font-size: 18px; }
+  .status.ok .spin::after { content: "✅"; }
+  .status.bad .spin::after { content: "⚠️"; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+           background: rgba(0,0,0,.78); color: #fff; padding: 8px 14px; border-radius: 999px; font-size: 13px;
+           opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 9; }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
+ <div id="view-order">
   <div class="top">
     <span class="logo">⚡</span>
     <h1>StarsZeus</h1>
     <span class="pill">⚡ выдача 1–3 мин</span>
   </div>
+
+  <div class="alert hidden" id="alert"><span id="alert-text"></span><button id="alert-btn" class="hidden"></button></div>
 
   <div class="seg tabs">
     <button data-tab="stars" class="active">⭐ Звёзды</button>
@@ -177,7 +224,42 @@
 
   <div class="total"><span id="sum-item">—</span><b id="sum-total">—</b></div>
   <div class="club hidden" id="club-note"></div>
-  <div class="foot">Счёт придёт в чат с ботом · <a id="sup-link" href="#">поддержка</a></div>
+  <div class="foot">Оплата прямо здесь · <a id="sup-link" href="#">поддержка</a></div>
+ </div>
+
+ <div id="view-pay" class="hidden">
+  <div class="bar"><button class="back" id="back">‹ Назад</button><h2>Оплата</h2></div>
+  <div class="card">
+    <div class="sum-row"><span id="pay-item"></span><b id="pay-total"></b></div>
+    <div class="oid" id="pay-oid"></div>
+  </div>
+
+  <div id="pay-lava" class="hidden">
+    <div class="hintline">💳 Оплата картой или через СБП. Нажми кнопку ниже — откроется страница оплаты.
+      Счёт действует 5 минут.</div>
+  </div>
+
+  <div id="pay-ton" class="hidden">
+    <div class="card" style="padding-top:2px;padding-bottom:2px">
+      <div class="line"><div><div class="k">Сумма</div><div class="v big" id="ton-amount"></div></div>
+        <button class="copy" data-copy="ton-amount-raw">Копировать</button></div>
+      <div class="line"><div><div class="k">Адрес</div><div class="v" id="ton-address"></div></div>
+        <button class="copy" data-copy="ton-address">Копировать</button></div>
+      <div class="line"><div><div class="k">Комментарий</div><div class="v big" id="ton-comment"></div></div>
+        <button class="copy" data-copy="ton-comment">Копировать</button></div>
+    </div>
+    <div class="warn">⚠️ Обязательно укажи комментарий — по нему мы найдём твой платёж.</div>
+  </div>
+
+  <div id="pay-crypto" class="hidden">
+    <div class="hintline">🪙 Оплати по кнопке ниже, затем вернись и нажми «Я оплатил».</div>
+  </div>
+
+  <div class="status" id="status"><span class="spin"></span>
+    <div><b id="status-title">Ожидаем оплату…</b><small id="status-sub">Статус обновляется сам</small></div></div>
+ </div>
+
+ <div class="toast" id="toast"></div>
 
   <button class="fallback-pay" id="fallback-pay">Оплатить</button>
 
@@ -201,8 +283,11 @@
     crypto: qs.get("cr") === "1",
     ton: qs.get("ton") !== "0",
     support: (qs.get("sup") || "").replace(/^@/, ""),
-    bot: (qs.get("bot") || "").replace(/^@/, "")
+    bot: (qs.get("bot") || "").replace(/^@/, ""),
+    api: (qs.get("api") || "").replace(/\/+$/, "")
   };
+  var view = "order";
+  var mainAction = null;
   var MAX_STARS = 1000000;
   var tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
   var selfName = ((tgUser && tgUser.username) || qs.get("u") || "").replace(/^@+/, "");
@@ -336,23 +421,31 @@
     } else cn.classList.add("hidden");
 
     var ok = !Object.keys(e).length && p > 0;
-    var label = ok ? "Оплатить · " + rub2(p) : "Оплатить";
+    if (view === "order") setMain(ok ? "Оплатить · " + rub2(p) : "Оплатить", ok, submit);
+  }
+
+  // ── главная кнопка внизу (Telegram MainButton или запасная) ─────────────
+  function setMain(label, enabled, action, busy) {
+    mainAction = action;
     if (inTelegram) {
-      tg.MainButton.setText(label);
-      if (ok) {
-        tg.MainButton.enable();
-        tg.MainButton.setParams({ color: tg.themeParams.button_color || "#2f8cf0",
-                                  text_color: tg.themeParams.button_text_color || "#ffffff" });
+      var mb = tg.MainButton;
+      mb.setText(label);
+      if (enabled) {
+        mb.enable();
+        mb.setParams({ color: tg.themeParams.button_color || "#2f8cf0",
+                       text_color: tg.themeParams.button_text_color || "#ffffff" });
       } else {
-        tg.MainButton.disable();
-        tg.MainButton.setParams({ color: tg.themeParams.hint_color || "#8b8d9c" });
+        mb.disable();
+        mb.setParams({ color: tg.themeParams.hint_color || "#8b8d9c" });
       }
-      tg.MainButton.show();
+      if (busy) mb.showProgress(false); else mb.hideProgress && mb.hideProgress();
+      if (label) mb.show(); else mb.hide();
     } else {
       var fb = $("fallback-pay");
-      fb.textContent = label; fb.disabled = !ok; fb.style.display = "block";
+      fb.textContent = label; fb.disabled = !enabled || !!busy; fb.style.display = label ? "block" : "none";
     }
   }
+  function runMain() { if (mainAction) mainAction(); }
 
   // ── отправка заказа в бота ─────────────────────────────────────────────
   // Заказ уходит ссылкой t.me/<бот>?start=o-<товар>-<кол-во>-<оплата>-<username>:
@@ -361,6 +454,13 @@
     touched.r = true; touched.q = true;
     var e = errors();
     if (Object.keys(e).length || !price()) { haptic("err"); update(); return; }
+    hideAlert();
+    if (P.api && inTelegram) { createOrder(); return; }
+    viaBot();
+  }
+
+  // запасной путь: заказ уходит в чат с ботом
+  function viaBot() {
     var code = "o-" + (state.kind === "stars" ? "s" : "p") + "-" + qty() + "-" +
                ({ lava: "l", ton: "t", crypto: "c" })[state.method] + "-" + recipient();
     haptic("tap");
@@ -374,6 +474,190 @@
       alert("Предпросмотр вне Telegram.\nБоту уйдёт: /start " + code);
     }
   }
+
+  // ── оплата прямо в приложении ──────────────────────────────────────────
+  var current = null, pollTimer = null, polls = 0;
+
+  function api(method, path, body) {
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
+    return fetch(P.api + path, {
+      method: method,
+      headers: { "Content-Type": "application/json", "X-Init-Data": tg.initData },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function (r) {
+      clearTimeout(t);
+      return r.json().catch(function () { return { ok: false, error: "Сервер ответил ошибкой", code: "server" }; });
+    }, function (err) { clearTimeout(t); throw err; });
+  }
+
+  function showAlert(text, btnText, onBtn) {
+    $("alert-text").textContent = text;
+    var b = $("alert-btn");
+    if (btnText) { b.textContent = btnText; b.onclick = onBtn; b.classList.remove("hidden"); }
+    else b.classList.add("hidden");
+    $("alert").classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+  function hideAlert() { $("alert").classList.add("hidden"); }
+
+  function apiFail(res) {
+    haptic("err");
+    var code = res && res.code;
+    var text = (res && res.error) || "Не получилось создать заказ";
+    if (code === "subscribe" && res.url) {
+      showAlert(text, "Подписаться", function () { tg.openTelegramLink(res.url); });
+    } else if (code === "halted" && res.url) {
+      showAlert(text, "Канал", function () { tg.openTelegramLink(res.url); });
+    } else if (code === "auth") {
+      showAlert("Сессия устарела. Закрой приложение и открой заново командой /app.");
+    } else {
+      showAlert(text);
+    }
+  }
+
+  function createOrder() {
+    setMain("Создаём заказ…", false, null, true);
+    api("POST", "/api/order", { k: state.kind, r: "@" + recipient(), q: qty(), m: state.method })
+      .then(function (res) {
+        if (!res || !res.ok) { update(); apiFail(res); return; }
+        haptic("tap");
+        openPay(res);
+      }, function () {
+        // сервер приложения недоступен — оформляем через бота
+        update();
+        showAlert("Сервер оплаты недоступен. Можно оформить этот же заказ через бота.",
+                  "Через бота", viaBot);
+      });
+  }
+
+  function tonStr(v) { return (+v).toFixed(6).replace(/0+$/, "").replace(/\.$/, ""); }
+
+  function openPay(res) {
+    current = res;
+    var o = res.order;
+    view = "pay";
+    $("view-order").classList.add("hidden");
+    $("view-pay").classList.remove("hidden");
+    window.scrollTo(0, 0);
+    $("pay-item").textContent = o.label + " → " + o.recipient;
+    $("pay-total").textContent = rub2(o.price);
+    $("pay-oid").textContent = "Заказ " + o.id;
+    ["lava", "ton", "crypto"].forEach(function (m) { $("pay-" + m).classList.toggle("hidden", o.method !== m); });
+    if (o.method === "ton") {
+      $("ton-amount").textContent = tonStr(res.ton.amount) + " TON";
+      $("ton-address").textContent = res.ton.address;
+      $("ton-comment").textContent = res.ton.comment;
+      $("pay-total").textContent = tonStr(res.ton.amount) + " TON";
+      $("pay-oid").textContent = "Заказ " + o.id + " · ≈ " + rub2(o.price);
+    }
+    if (inTelegram && tg.BackButton) tg.BackButton.show();
+    setStatus(o.status);
+    if (o.method === "crypto" && res.pay_url) tg.openLink(res.pay_url);
+    polls = 0;
+    clearInterval(pollTimer);
+    pollTimer = setInterval(function () { refresh(false); }, 4000);
+  }
+
+  function payMain(status) {
+    var o = current.order;
+    if (status === "done" || status === "failed" || status === "cancelled") {
+      setMain("Готово", true, function () { if (inTelegram) tg.close(); });
+      if (status !== "done") setMain("Новый заказ", true, backToOrder);
+      return;
+    }
+    if (status === "paid") { setMain("Выдаём товар…", false, null, true); return; }
+    if (o.method === "lava") {
+      setMain("Перейти к оплате · " + rub2(o.price), true, function () { tg.openLink(current.pay_url); });
+    } else if (o.method === "crypto") {
+      setMain("Я оплатил", true, function () {
+        api("POST", "/api/order/" + o.id + "/paid").then(function (r) { if (r && r.ok) setStatus(r.order.status); });
+      });
+    } else {
+      setMain("Я оплатил — проверить", true, function () { refresh(true); });
+    }
+  }
+
+  var STATUS = {
+    waiting: ["Ожидаем оплату…", "Статус обновляется сам", ""],
+    paid: ["Оплата получена!", "Выдаём товар — обычно 1–3 минуты", ""],
+    done: ["Готово!", "Товар зачислен. Чек и детали — в чате с ботом", "ok"],
+    failed: ["Не удалось выдать товар", "Напиши в поддержку — решим вопрос с оплатой", "bad"],
+    cancelled: ["Счёт отменён или истёк", "Создай заказ заново", "bad"]
+  };
+  function setStatus(status) {
+    var s = STATUS[status] || STATUS.waiting;
+    if (current && current.order.method === "crypto" && status === "paid") {
+      s = ["Проверяем платёж", "Администратор проверит оплату и выдаст товар", ""];
+    }
+    $("status-title").textContent = s[0];
+    $("status-sub").textContent = s[1];
+    $("status").className = "status" + (s[2] ? " " + s[2] : "");
+    if (current) current.order.status = status;
+    if (status === "done") haptic("ok");
+    if (status === "done" || status === "failed" || status === "cancelled") clearInterval(pollTimer);
+    payMain(status);
+  }
+
+  function refresh(check) {
+    if (!current) return;
+    polls++;
+    if (polls > 450) { clearInterval(pollTimer); return; }   // ~30 минут
+    api("GET", "/api/order/" + current.order.id + (check ? "?check=1" : ""))
+      .then(function (r) {
+        if (r && r.ok) {
+          if (check && r.order.status === "waiting") toast("Оплата пока не найдена");
+          if (r.order.status !== current.order.status || check) setStatus(r.order.status);
+        }
+      }, function () { if (check) toast("Нет связи, попробуй ещё раз"); });
+  }
+
+  function backToOrder() {
+    clearInterval(pollTimer);
+    current = null;
+    view = "order";
+    if (inTelegram && tg.BackButton) tg.BackButton.hide();
+    $("view-pay").classList.add("hidden");
+    $("view-order").classList.remove("hidden");
+    update();
+  }
+
+  var toastTimer = null;
+  function toast(text) {
+    var t = $("toast");
+    t.textContent = text; t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 1600);
+  }
+
+  function copyText(text, btn) {
+    function ok() {
+      haptic("sel"); toast("Скопировано");
+      if (btn) { btn.textContent = "✓"; btn.classList.add("done");
+        setTimeout(function () { btn.textContent = "Копировать"; btn.classList.remove("done"); }, 1500); }
+    }
+    function legacy() {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); ok(); } catch (x) { toast(text); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, legacy);
+    } else legacy();
+  }
+  document.querySelectorAll(".copy").forEach(function (b) {
+    b.onclick = function () {
+      if (!current || !current.ton) return;
+      var key = b.dataset.copy;
+      var val = key === "ton-amount-raw" ? tonStr(current.ton.amount)
+              : key === "ton-address" ? current.ton.address : current.ton.comment;
+      copyText(val, b);
+    };
+  });
+  $("back").onclick = function () { haptic("sel"); backToOrder(); };
 
   // ── события ────────────────────────────────────────────────────────────
   document.querySelectorAll(".tabs button").forEach(function (t) {
@@ -399,7 +683,7 @@
   ["friend", "qty"].forEach(function (id) {
     $(id).addEventListener("keydown", function (ev) { if (ev.key === "Enter") ev.target.blur(); });
   });
-  $("fallback-pay").onclick = submit;
+  $("fallback-pay").onclick = runMain;
 
   if (P.support) {
     $("sup-link").href = "https://t.me/" + P.support;
@@ -411,7 +695,8 @@
     document.body.classList.add("tg");
     tg.ready(); tg.expand();
     try { tg.setHeaderColor("bg_color"); tg.setBackgroundColor("bg_color"); } catch (x) {}
-    tg.MainButton.onClick(submit);
+    tg.MainButton.onClick(runMain);
+    if (tg.BackButton) tg.BackButton.onClick(function () { if (view === "pay") backToOrder(); });
   }
   update();
 })();
